@@ -174,6 +174,7 @@ def main(argv):
         filtered_cluster_list = cluster_list
 
 
+
     print
     print
     print "Starting molecular networking"
@@ -570,9 +571,9 @@ def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pic
                 f.write("SCANNO={}\n".format(cluster.spectrum.scan_number))
                 f.write("CID={}\n".format(cluster.cluster_id))
                 f.write("FAMILYID={}\n".format(family.family_id))
-                f.write("PEPMASS={}\n".format(cluster.spectrum.parent_mz))
-                f.write("PRECURSORMASS={}\n".format(cluster.spectrum.precursor_mz))
+                f.write("PEPMASS={}\n".format(cluster.spectrum.precursor_mz))
                 f.write("RTINSECONDS={}\n".format(cluster.spectrum.rt))
+                f.write("CHARGE={}\n".format(cluster.spectrum.charge))
                 for mz,intensity in cluster.spectrum.peaks:
                     f.write("{} {}\n".format(mz,intensity))
                 f.write("END IONS\n\n")
@@ -646,7 +647,6 @@ def make_initial_network(cluster_list,similarity_function,similarity_tolerance,m
     filtered_cluster_list = filter(lambda x: len(x.spectra)>=mc,cluster_list)
 
 
-
     edges = []
     edge_dict = {}
     G = Graph()
@@ -660,7 +660,7 @@ def make_initial_network(cluster_list,similarity_function,similarity_tolerance,m
                 score,_ = similarity_function(cluster,cluster2,similarity_tolerance,min_match)
                 if score >= score_threshold:
                     G.add_edge(cluster,cluster2,score)
-    
+
     filtered_graph = G.topk_filter(k = k)
 
     return filtered_graph
@@ -691,6 +691,7 @@ class Graph(object):
         done = set()
         filtered_edges = {}
         for node,edges in sorted_edge_dict.items():
+            filtered_edges[node] = []
             j = 0
             for node2,weight in edges:
                 other_pos = sorted_edge_dict[node2].index((node,weight))
@@ -770,6 +771,7 @@ def mol_network(cluster_list,similarity_function,similarity_tolerance,min_match,
     print "Originally {} components".format(G.n_connected_components())
     
     molecular_families = G.connected_components()
+
     finished = False
 
     final_families = []
