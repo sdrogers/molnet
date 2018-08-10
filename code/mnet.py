@@ -573,7 +573,8 @@ def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pic
                 f.write("FAMILYID={}\n".format(family.family_id))
                 f.write("PEPMASS={}\n".format(cluster.spectrum.precursor_mz))
                 f.write("RTINSECONDS={}\n".format(cluster.spectrum.rt))
-                f.write("CHARGE={}\n".format(cluster.spectrum.charge))
+                f.write("CHARGE={}\n".format(cluster.spectrum.ms1.charge))
+                f.write("NAME={}\n".format(cluster.cluster_id))
                 for mz,intensity in cluster.spectrum.peaks:
                     f.write("{} {}\n".format(mz,intensity))
                 f.write("END IONS\n\n")
