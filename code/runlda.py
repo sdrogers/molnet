@@ -5,7 +5,8 @@ options = {
     'K': 20,
     'n_its':100,
     'overlap_thresh':0.3,
-    'p_thresh':0.3
+    'p_thresh':0.3,
+    'lda_path':LDA_CODE_PATH,
 }
 
 if __name__ == '__main__':
@@ -16,11 +17,10 @@ if __name__ == '__main__':
                 'n_its=',
                 'overlap_thresh=',
                 'p_thresh=',
+                'lda_path=',
     ]
 
-    sys.path.append(LDA_CODE_PATH)
-    from lda import VariationalLDA,compute_overlap_scores,write_summary_file,write_topic_report
-    from ms2lda_feature_extraction import LoadMGF,MakeBinnedFeatures
+    
 
     input_prefix = sys.argv[1]
 
@@ -34,6 +34,11 @@ if __name__ == '__main__':
             options[keyk] = value
 
     print options
+
+    sys.path.append(options['lda_path'])
+
+    from lda import VariationalLDA,compute_overlap_scores,write_summary_file,write_topic_report
+    from ms2lda_feature_extraction import LoadMGF,MakeBinnedFeatures
 
     mgf_file = input_prefix + '.mgf'
 

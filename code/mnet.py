@@ -974,33 +974,43 @@ def test_family(family,similarity_function,similarity_tolerance,score_threshold)
               
 
 
-def optimise_noise_thresh(spectra,similarity_function,similarity_tolerance,min_match_peaks,ms2_vals = [0,1000,5000,10000]):
+def optimise_noise_thresh(groups,similarity_function,similarity_tolerance,min_match_peaks,ms2_vals = [0,1000,5000,10000]):
     import numpy as np
     from copy import deepcopy
-    spectra.sort(key = lambda x: x.precursor_mz)
+    # spectra.sort(key = lambda x: x.precursor_mz)
     curves = []
     for i in range(1000):
+        # found = False
+        # while not found:
+        #     pos1 = np.random.choice(len(spectra))
+        #     pos2 = pos1
+        #     while pos2 > 0 and abs(spectra[pos1].precursor_mz - spectra[pos2].precursor_mz) <= similarity_tolerance and not found:
+        #         pos2 -=1
+        #         if spectra[pos1].n_peaks > 0 and spectra[pos2].n_peaks > 0:
+        #             s,m = similarity_function(spectra[pos1],spectra[pos2],similarity_tolerance,min_match_peaks)
+        #             if s > 0:
+        #                 found = True
+        #     if not found:
+        #         pos2 = pos1
+        #         while pos2 < len(spectra) and abs(spectra[pos1].precursor_mz - spectra[pos2].precursor_mz) <= similarity_tolerance and not found:
+        #             pos2 += 1
+        #             if spectra[pos1].n_peaks > 0 and spectra[pos2].n_peaks > 0:
+        #                 s,m = similarity_function(spectra[pos1],spectra[pos2],similarity_tolerance,min_match_peaks)
+        #                 if s > 0:
+        #                     found = True
         found = False
-        while not found:
-            pos1 = np.random.choice(len(spectra))
-            pos2 = pos1
-            while pos2 > 0 and abs(spectra[pos1].precursor_mz - spectra[pos2].precursor_mz) <= similarity_tolerance and not found:
-                pos2 -=1
-                if spectra[pos1].n_peaks > 0 and spectra[pos2].n_peaks > 0:
-                    s,m = similarity_function(spectra[pos1],spectra[pos2],similarity_tolerance,min_match_peaks)
-                    if s > 0:
-                        found = True
-            if not found:
-                pos2 = pos1
-                while pos2 < len(spectra) and abs(spectra[pos1].precursor_mz - spectra[pos2].precursor_mz) <= similarity_tolerance and not found:
-                    pos2 += 1
-                    if spectra[pos1].n_peaks > 0 and spectra[pos2].n_peaks > 0:
-                        s,m = similarity_function(spectra[pos1],spectra[pos2],similarity_tolerance,min_match_peaks)
-                        if s > 0:
-                            found = True
+        group = np.random.choice(groups)
+
+        if len(group) > 1:
+            pos1 = np.random.choice(group)
+            pos2 = np.random.choice(group)
+            if not pos1 == pos2:
+                found = True
+
+
         if found:
-            s1 = deepcopy(spectra[pos1])
-            s2 = deepcopy(spectra[pos2])
+            s1 = deepcopy(pos1)
+            s2 = deepcopy(pos2)
             curve = []
             for m2 in ms2_vals:
 
@@ -1103,12 +1113,13 @@ class MS1(object):
         self.parent_mz -= PROTON_MASS
 
 class MNetLoadMZML(object):
-    def __init__(self,filename,obo_version = '4.0.1',ms1_precision=5e-6,mz_tolerance = 0.02,rt_tolerance = 5):
+    def __init__(self,filename,obo_version = '4.0.1',ms1_precision=5e-6,mz_tolerance = 0.02,rt_tolerance = 5, get_groups = False):
         self.filename = filename
         self.obo_version = obo_version
         self.ms1_precision = ms1_precision
         self.mz_tolerance = mz_tolerance
         self.rt_tolerance = rt_tolerance
+        self.get_groups = get_groups
 
     def load_spectra(self):
         self.ms1 = []
@@ -1184,6 +1195,7 @@ class MNetLoadMZML(object):
 
 
         components = g.connected_components()
+        self.groups = []
         for c in components:
             c = list(c.edge_dict.keys())
             best_ms1 = c[0]
@@ -1191,12 +1203,21 @@ class MNetLoadMZML(object):
                 if self.ms1_to_spectra[co].total_ms2_intensity > self.ms1_to_spectra[best_ms1].total_ms2_intensity:
                     best_ms1 = co
             keep_ms1.add(best_ms1)
+            if self.get_groups:
+                new_list = []
+                for co in c:
+                    new_list.append(self.ms1_to_spectra[co])
+                self.groups.append(new_list)
+
         for s in self.spectra:
             if s.ms1 in keep_ms1:
                 keep_spectra.append(s)
 
         self.ms1 = keep_ms1
         self.spectra = keep_spectra
+        
+
+
 
         print "After duplicate filtering, {} spectra remain".format(len(self.spectra)) 
         
