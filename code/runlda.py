@@ -1,12 +1,20 @@
 LDA_CODE_PATH = '/Users/simon/git/lda/code'
+MOTIF_DB_PATH = '/home/simon/git/motifdb'
 
-import sys,csv,getopt
+
+
+import sys,csv,getopt,os
+
+
 options = {
     'K': 20,
     'n_its':100,
     'overlap_thresh':0.3,
     'p_thresh':0.3,
     'lda_path':LDA_CODE_PATH,
+    'pdf_backend':'Agg',
+    'motifdb': '',
+    'motifdb_path':MOTIF_DB_PATH,
 }
 
 if __name__ == '__main__':
@@ -18,6 +26,9 @@ if __name__ == '__main__':
                 'overlap_thresh=',
                 'p_thresh=',
                 'lda_path=',
+                'pdf_backend=',
+                'motifdb=',
+                'motifdb_path=',
     ]
 
     
@@ -25,6 +36,7 @@ if __name__ == '__main__':
     input_prefix = sys.argv[1]
 
     found_options,the_rest = getopt.getopt(sys.argv[2:],"",long_options)
+
 
     for key,value in found_options:
         keyk = key.split('--')[1]
@@ -54,9 +66,34 @@ if __name__ == '__main__':
 
     corpus,word_mz_range = MakeBinnedFeatures().make_features(ms2)
 
-    print "Creating LDA object with K = {}".format(options['K'])
 
-    v = VariationalLDA(corpus[corpus.keys()[0]], K = int(options['K']), normalise = 1000.0)
+
+    if len(options['motifdb'])>0: 
+        print "Loading motifs from motifdb"
+
+        db_path = options['motifdb_path'] + os.sep + 'motifs'
+        db_code = options['motifdb_path'] + os.sep + 'code' + os.sep + 'utilities'   
+        
+        sys.path.append(db_code)
+
+        from motifdb_loader import load_db,MotifFilter
+        
+        db_list = options['motifdb'].split()
+        db_spectra,db_metadata = load_db(db_list,db_path)
+        db_spectra,db_metadata = MotifFilter(db_spectra,db_metadata).filter()
+    else:
+        db_spectra = None
+        db_metadata = None
+
+
+
+
+    print "Creating LDA object with K = {}".format(options['K'])
+    v = VariationalLDA(corpus[corpus.keys()[0]],
+        K = int(options['K']),
+        normalise = 1000.0,
+        fixed_topics = db_spectra,
+        fixed_topics_metadata = db_metadata)
 
     print "Running LDA for {} iterations".format(options['n_its'])
 
@@ -111,9 +148,10 @@ if __name__ == '__main__':
     summary_file = input_prefix + '_lda_summary.csv'
     write_summary_file(vd,summary_file)
 
+
     print "Creating pdf topic report"
     report_file = input_prefix + '_lda_report.pdf'
-    write_topic_report(vd,report_file)
+    write_topic_report(vd,report_file,backend = 'Agg')
             
 
 
