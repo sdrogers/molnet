@@ -7,7 +7,7 @@ import pymzml
 import glob
 import csv
 from blist import blist
-import networkx as nx
+# import networkx as nx
 
 from scoring_functions import fast_cosine,fast_cosine_shift
 
