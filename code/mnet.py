@@ -271,6 +271,65 @@ class Spectrum(object):
             self.max_ms2_intensity = 0.0
             self.total_ms2_intensity = 0.0
 
+
+    def randomise_intensities(self):
+        from numpy.random import permutation
+        intensities = [p[1] for p in self.peaks]
+        permuted_intensities = permutation(intensities)
+        new_peaks = []
+        for i,(mz,intensity) in enumerate(self.peaks):
+            new_peaks.append((mz,permuted_intensities[i]))
+        self.peaks = new_peaks
+        self.peaks.sort(key = lambda x: x[0])
+        if self.n_peaks > 0:
+            self.normalised_peaks = sqrt_normalise(self.peaks)
+            self.max_ms2_intensity = max([intensity for mz,intensity in self.peaks])
+            self.total_ms2_intensity = sum([intensity for mz,intensity in self.peaks])
+        else:
+            self.normalised_peaks = []
+            self.max_ms2_intensity = 0.0
+            self.total_ms2_intensity = 0.0        
+
+    def flatten_peaks(self):
+        max_intensity = max([p[1] for p in self.peaks])
+        new_peaks = []
+        for mz,intensity in self.peaks:
+            new_peaks.append((mz,max_intensity))
+        self.peaks = new_peaks
+        if self.n_peaks > 0:
+            self.normalised_peaks = sqrt_normalise(self.peaks)
+            self.max_ms2_intensity = max([intensity for mz,intensity in self.peaks])
+            self.total_ms2_intensity = sum([intensity for mz,intensity in self.peaks])
+        else:
+            self.normalised_peaks = []
+            self.max_ms2_intensity = 0.0
+            self.total_ms2_intensity = 0.0
+
+    def remove_top_perc(self,perc):
+        # remove the peaks corresponding to the top perc of intensity
+        total_intensity = sum([p[1] for p in self.peaks])
+        self.peaks.sort(key = lambda x: x[1])
+        new_peaks = []
+        total_found = 0.0
+        for mz,intensity in self.peaks:
+            total_found += intensity
+            if total_found > (1-perc)*total_intensity:
+                break
+            else:
+                new_peaks.append((mz,intensity))
+
+        self.peaks = new_peaks
+        self.peaks.sort(key = lambda x: x[0])
+
+        if self.n_peaks > 0:
+            self.normalised_peaks = sqrt_normalise(self.peaks)
+            self.max_ms2_intensity = max([intensity for mz,intensity in self.peaks])
+            self.total_ms2_intensity = sum([intensity for mz,intensity in self.peaks])
+        else:
+            self.normalised_peaks = []
+            self.max_ms2_intensity = 0.0
+            self.total_ms2_intensity = 0.0
+
     def remove_small_peaks(self,min_ms2_intensity = 10000):
         new_peaks = []
         for mz,intensity in self.peaks:
@@ -972,57 +1031,6 @@ def test_family(family,similarity_function,similarity_tolerance,score_threshold)
 #     return funky  
               
 
-
-def optimise_noise_thresh(groups,similarity_function,similarity_tolerance,min_match_peaks,ms2_vals = [0,1000,5000,10000]):
-    import numpy as np
-    from copy import deepcopy
-    # spectra.sort(key = lambda x: x.precursor_mz)
-    curves = []
-    for i in range(1000):
-        # found = False
-        # while not found:
-        #     pos1 = np.random.choice(len(spectra))
-        #     pos2 = pos1
-        #     while pos2 > 0 and abs(spectra[pos1].precursor_mz - spectra[pos2].precursor_mz) <= similarity_tolerance and not found:
-        #         pos2 -=1
-        #         if spectra[pos1].n_peaks > 0 and spectra[pos2].n_peaks > 0:
-        #             s,m = similarity_function(spectra[pos1],spectra[pos2],similarity_tolerance,min_match_peaks)
-        #             if s > 0:
-        #                 found = True
-        #     if not found:
-        #         pos2 = pos1
-        #         while pos2 < len(spectra) and abs(spectra[pos1].precursor_mz - spectra[pos2].precursor_mz) <= similarity_tolerance and not found:
-        #             pos2 += 1
-        #             if spectra[pos1].n_peaks > 0 and spectra[pos2].n_peaks > 0:
-        #                 s,m = similarity_function(spectra[pos1],spectra[pos2],similarity_tolerance,min_match_peaks)
-        #                 if s > 0:
-        #                     found = True
-        found = False
-        group = np.random.choice(groups)
-
-        if len(group) > 1:
-            pos1 = np.random.choice(group)
-            pos2 = np.random.choice(group)
-            if not pos1 == pos2:
-                found = True
-
-
-        if found:
-            s1 = deepcopy(pos1)
-            s2 = deepcopy(pos2)
-            curve = []
-            for m2 in ms2_vals:
-
-                s1.remove_small_peaks(min_ms2_intensity = m2)
-                s2.remove_small_peaks(min_ms2_intensity = m2)
-                if s1.n_peaks > 0 and s2.n_peaks > 0:
-                    s,m = similarity_function(s1,s2,similarity_tolerance,3)
-                    curve.append(s)
-                else:
-                    curve.append(0)
-    
-            curves.append(curve)
-    return curves
 
 
 
