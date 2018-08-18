@@ -617,8 +617,14 @@ def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pic
         writer = csv.writer(f)
         for family in molecular_families:
             scores = family.scores
-            for node1,node2,weight in scores:
-                writer.writerow([node1.cluster_id,node2.cluster_id,weight])
+            if len(scores) > 0:
+                for node1,node2,weight in scores:
+                    writer.writerow([node1.cluster_id,node2.cluster_id,weight])
+            else:
+                # Singleteon family -- write the self loop
+                assert len(family.clusters) == 1
+                cluster = family.clusters[0]
+                writer.writerow([cluster.cluster_id,cluster.cluster_id,'self'])
 
     # finally, write the mgf-style file
     with open(mgf_file,'w') as f:

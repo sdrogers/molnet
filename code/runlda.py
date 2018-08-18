@@ -17,6 +17,24 @@ options = {
     'motifdb_path':MOTIF_DB_PATH,
 }
 
+
+def check_edge(edge,edges):
+    if check_uni_edge(edge[0],edge[1],edges):
+        return True
+    if check_uni_edge(edge[1],edge[0],edges):
+        return True
+    return False
+
+def check_uni_edge(node1,node2,edges):
+    node1edges = filter(lambda x: x[0] == node1, edges)
+    if len(node1edges) > 0:
+        node12edges = filter(lambda x: x[1] == node2, node1edges)
+        if len(node12edges) > 0:
+            return True
+    return False
+
+
+
 if __name__ == '__main__':
 
 
@@ -132,6 +150,13 @@ if __name__ == '__main__':
             for doc2 in docs[i+1:]:
                 edges.append([metadata[doc]['cid'],metadata[doc2]['cid'],m,0.0])
 
+    # Filter out motif edges that do not have a cosine edge -- i.e. only keep those in the same mgf_file
+    new_edges = []
+    for edge in edges:
+        if check_edge(edge,original_edges):
+            new_edges.append(edge)
+    edges = new_edges
+
     print "Combining edges"
 
     all_edges = original_edges + edges
@@ -153,5 +178,18 @@ if __name__ == '__main__':
     report_file = input_prefix + '_lda_report.pdf'
     write_topic_report(vd,report_file,backend = 'Agg')
             
+def check_edge(edge,edges):
+    if check_uni_edge(edge[0],edge[1],edges):
+        return True
+    if check_uni_edge(edge[1],edge[0],edges):
+        return True
+    return False
 
+def check_uni_edge(node1,node2,edges):
+    node1edges = filter(lambda x: x[0] == node1)
+    if len(node1edges) > 0:
+        node12edges = filter(lambda x: x[1] == node2)
+        if len(node12edges) > 0:
+            return True
+    return False
 
