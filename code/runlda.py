@@ -150,6 +150,15 @@ if __name__ == '__main__':
             for doc2 in docs[i+1:]:
                 edges.append([metadata[doc]['cid'],metadata[doc2]['cid'],m,0.0])
 
+
+    # Write a file with all of the edges, even the ones across motifs
+    all_edges = original_edges + edges
+    with open(input_prefix+'_all_edges_ms2lda.csv','w') as f:
+        writer = csv.writer(f)
+        for line in all_edges:
+            writer.writerow(line)
+
+
     # Filter out motif edges that do not have a cosine edge -- i.e. only keep those in the same mgf_file
     new_edges = []
     for edge in edges:
