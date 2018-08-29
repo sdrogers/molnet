@@ -160,6 +160,7 @@ if __name__ == '__main__':
 
 
     # Filter out motif edges that do not have a cosine edge -- i.e. only keep those in the same mgf_file
+    
     new_edges = []
     for edge in edges:
         if check_edge(edge,original_edges):
