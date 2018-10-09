@@ -1123,7 +1123,7 @@ class MS1(object):
         self.compute_parent_mz()
     def compute_parent_mz(self):
         self.parent_mz = self.precursor_mz*self.charge
-        self.parent_mz -= PROTON_MASS
+        self.parent_mz -= PROTON_MASS*self.charge
 
 class MNetLoadMZML(object):
     def __init__(self,filename,obo_version = '4.0.1',ms1_precision=5e-6,mz_tolerance = 0.02,rt_tolerance = 5, get_groups = False):
