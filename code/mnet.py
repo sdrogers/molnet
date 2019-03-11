@@ -6,6 +6,7 @@ import bisect
 import pymzml
 import glob
 import csv
+import jsonpickle
 from blist import blist
 
 from scoring_functions import fast_cosine,fast_cosine_shift
@@ -39,6 +40,27 @@ options = {
 }
 
 def main(argv):
+    options = {
+        "min_ms2_intensity":5000,
+        "filter_k":6,
+        "filter_mz_range":50,
+        "filter_precursor_tol":17,
+        "filter_n_peaks":2,
+        "duplicate_mz_tol":0.2,
+        "duplicate_rt_tol":5,
+        "cl_ms1_tol":0.2,
+        "cl_rt_tol":1e100,
+        "cl_sim_function":'cosine',
+        "cl_min_match_peaks":2,
+        "ms2_tol":0.2,
+        "cl_score_threshold":0.6,
+        "mn_sim_function":'cosine_shift',
+        "mn_score_threshold":0.6,
+        "mn_min_match_peaks":2,
+        "mn_mc":1,
+        "removal_list":None,
+        "metadata_file": None,
+    }
     long_options = ["min_ms2_intensity=",
                     "filter_k=",
                     "filter_mz_range=",
@@ -58,12 +80,11 @@ def main(argv):
                     "mn_mc=",
                     "removal_list=",
                     "metadata_file=",
+                    "settings_file=",
                     ]
     input_dir = argv[0]
     output_prefix = argv[1]
-
-    options['input_dir'] = input_dir
-    options['output_prefix'] = output_prefix
+   
 
     found_options,the_rest = getopt.getopt(argv[2:],"",long_options)
     
@@ -73,6 +94,21 @@ def main(argv):
     print "Output prefix: ",output_prefix
     print
     print
+
+    # check for a settings file, this should be loaded first
+    for key,value in found_options:
+        keyk = key.split('--')[1]
+        if keyk == 'settings_file':
+            print "Loading settings file"
+            with open(value,'r') as f:
+                options = jsonpickle.loads(f.read())
+            break
+
+    # override whatever input_dir and output_prefix was in the options file
+    options['input_dir'] = input_dir
+    options['output_prefix'] = output_prefix
+
+
     for key,value in found_options:
         keyk = key.split('--')[1]
         try:
@@ -1122,8 +1158,11 @@ class MS1(object):
         self.rt = rt
         self.compute_parent_mz()
     def compute_parent_mz(self):
-        self.parent_mz = self.precursor_mz*self.charge
-        self.parent_mz -= PROTON_MASS
+        try:
+            self.parent_mz = self.precursor_mz*self.charge
+            self.parent_mz -= PROTON_MASS
+        except:
+            self.parent_mz = self.precursor_mz
 
 class MNetLoadMZML(object):
     def __init__(self,filename,obo_version = '4.0.1',ms1_precision=5e-6,mz_tolerance = 0.02,rt_tolerance = 5, get_groups = False):
