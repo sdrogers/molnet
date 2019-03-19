@@ -1,4 +1,4 @@
-def fast_cosine_shift(spectrum1,spectrum2,tol,min_match):
+def fast_cosine_shift(spectrum1,spectrum2,tol,min_match, normalize = False):
     if spectrum1.n_peaks == 0 or spectrum2.n_peaks == 0:
         return 0.0,[]
 
@@ -27,7 +27,12 @@ def fast_cosine_shift(spectrum1,spectrum2,tol,min_match):
             used_matches.append(m)
     if len(used_matches) < min_match:
         score = 0.0
-    return score,used_matches
+
+    if normalize == True:
+        # Normalize score:
+        score = score/max(np.sum(np.array(spec1)[:,1]**2), np.sum(np.array(spec2)[:,1]**2))
+
+    return score, used_matches
 
 
 def find_pairs(spec1,spec2,tol,shift=0):
