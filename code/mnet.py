@@ -1160,8 +1160,9 @@ class MS1(object):
     def compute_parent_mz(self):
         try:
             self.parent_mz = self.precursor_mz*self.charge
-            self.parent_mz -= PROTON_MASS
+            self.parent_mz -= PROTON_MASS*self.charge
         except:
+            # if charge not available
             self.parent_mz = self.precursor_mz
 
 class MNetLoadMZML(object):
