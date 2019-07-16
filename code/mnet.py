@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 import os
 import getopt
@@ -67,12 +69,12 @@ def main(argv):
 
     found_options,the_rest = getopt.getopt(argv[2:],"",long_options)
     
-    print "Welcome to Simons molecular networking pipeline"
-    print "--------"
-    print "Input folder: ",input_dir
-    print "Output prefix: ",output_prefix
-    print
-    print
+    print("Welcome to Simons molecular networking pipeline")
+    print("--------")
+    print("Input folder: ",input_dir)
+    print("Output prefix: ",output_prefix)
+    print()
+    print()
     for key,value in found_options:
         keyk = key.split('--')[1]
         try:
@@ -80,12 +82,12 @@ def main(argv):
         except:
             options[keyk] = value
 
-    print "OPTIONS:"
+    print("OPTIONS:")
     for key,value in options.items():
-        print "{}: {}".format(key,value)
+        print("{}: {}".format(key,value))
     
-    print
-    print
+    print()
+    print()
 
 
     if options['cl_sim_function'] == 'cosine':
@@ -93,7 +95,7 @@ def main(argv):
     elif options['cl_sim_function'] == 'cosine_shift':
         cl_sim_function = fast_cosine_shift
     else:
-        print "Unknown cluster sim function: {}".format(options['cl_sim_function'])
+        print("Unknown cluster sim function: {}".format(options['cl_sim_function']))
         return
 
     if options['mn_sim_function'] == 'cosine':
@@ -101,7 +103,7 @@ def main(argv):
     elif options['mn_sim_function'] == 'cosine_shift':
         mn_sim_function = fast_cosine_shift
     else:
-        print "Unknown mol net sim function: {}".format(options['mn_sim_function'])
+        print("Unknown mol net sim function: {}".format(options['mn_sim_function']))
         return
 
 
@@ -132,11 +134,11 @@ def main(argv):
     #         spectra.append(Spectrum(sp['peaks'],sp['file_name'],sp['scan_number'],
     #                                 sp['ms1'],sp['precursor_mz'],sp['rt']))
 
-    print
-    print "Created {} spectrum objects".format(len(spectra))
+    print()
+    print("Created {} spectrum objects".format(len(spectra)))
 
     # Do the filtering
-    print "Filtering..."
+    print("Filtering...")
     for s in spectra:
         s.remove_small_peaks(min_ms2_intensity = options['min_ms2_intensity'])
         s.remove_precursor_peak(tolerance = options['filter_precursor_tol'])
@@ -144,26 +146,26 @@ def main(argv):
     
     spectra = filter(lambda x: x.n_peaks >= options['filter_n_peaks'],spectra)
 
-    print "After filtering, {} spectra remain".format(len(spectra))
+    print("After filtering, {} spectra remain".format(len(spectra)))
 
-    print
-    print "Clustering..."
+    print()
+    print("Clustering...")
     spectra.sort(key = lambda x: x.total_ms2_intensity,reverse = True)
     cluster_list = blist([])
     next_id = 0
     for i,s in enumerate(spectra):
         if i%1000 == 0 and i > 0:
-            print "Processed {} spectra, formed {} clusters".format(i,len(cluster_list))
+            print("Processed {} spectra, formed {} clusters".format(i,len(cluster_list)))
         next_id = merge(cluster_list,s,cl_sim_function,options['ms2_tol'],
                         options['cl_min_match_peaks'],score_threshold=options['cl_score_threshold'],
                         rt_tolerance=options['cl_rt_tol'],ms1_tolerance = options['cl_ms1_tol'],
                         initial_cluster_id = next_id)
 
-    print "Finished, {} clusters found".format(len(cluster_list))
+    print("Finished, {} clusters found".format(len(cluster_list)))
 
     if options['removal_list']:
-        print
-        print
+        print()
+        print()
         with open(options['removal_list'],'r') as f:
             blank_files = []
             for line in f:
@@ -174,17 +176,17 @@ def main(argv):
 
 
 
-    print
-    print
-    print "Starting molecular networking"
+    print()
+    print()
+    print("Starting molecular networking")
     molecular_families_graphs,molecular_families = mol_network(filtered_cluster_list,mn_sim_function,
                                                            options['ms2_tol'],options['mn_min_match_peaks'],
                                                            options['mn_score_threshold'],mc = options['mn_mc'])
 
-    print
-    print
+    print()
+    print()
     if options['metadata_file']:
-        print "loading metadata from {}".format(options['metadata_file'])
+        print("loading metadata from {}".format(options['metadata_file']))
         rows = []
         with open(options['metadata_file'],'r') as f:
             reader = csv.reader(f,delimiter=',',dialect = 'excel')
@@ -193,7 +195,7 @@ def main(argv):
                 rows.append(line)
 
         n_metadata = len(heads) - 1
-        print "Loaded {} metadata types: {}".format(n_metadata," ".join(heads[1:]))
+        print("Loaded {} metadata types: {}".format(n_metadata," ".join(heads[1:])))
         metadata = []
         for i in range(n_metadata):
             metadata_name = heads[i+1]
@@ -202,14 +204,14 @@ def main(argv):
             for row in rows:
                 metadata_dict[row[0]] = row[i+1]
             unique_vals = list(set(metadata_dict.values()))
-            print "Unique values for {}: {}".format(metadata_name," ".join(unique_vals))
+            print("Unique values for {}: {}".format(metadata_name," ".join(unique_vals)))
             metadata.append((unique_vals,metadata_dict,nnz_name))
     else:
         metadata = []
 
-    print
-    print
-    print "Writing output files with prefix: {}".format(options['output_prefix'])
+    print()
+    print()
+    print("Writing output files with prefix: {}".format(options['output_prefix']))
     write_mnet_files(molecular_families,options['output_prefix'],options,metadata = metadata,pickle = True)
 
 
@@ -393,10 +395,10 @@ class Spectrum(object):
         
 
     def print_spectrum(self):
-        print
-        print self.file_name,self.scan_number
+        print()
+        print(self.file_name,self.scan_number)
         for i,(mz,intensity) in enumerate(self.peaks):
-            print i,mz,intensity,self.normalised_peaks[i][1]
+            print(i,mz,intensity,self.normalised_peaks[i][1])
 
     def plot(self,xlim = None,**kwargs):
         plot_spectrum(self.peaks,xlim=xlim,title = "{} {} (m/z= {})".format(self.file_name,self.scan_number,self.parent_mz),**kwargs)
@@ -442,7 +444,7 @@ class Cluster(object):
 
     def list_members(self):
         for spec in self.spectra:
-            print "{}: {}".format(spec.file_name,spec.scan_number)
+            print("{}: {}".format(spec.file_name,spec.scan_number))
 
     def plot_spectrum(self,xlim = None,**kwargs):
         self.spectrum.plot(xlim = xlim,**kwargs)
@@ -541,9 +543,9 @@ class MolecularFamily(object):
 
     def report(self,similarity_function,similarity_tolerance,**kwargs):
         print
-        print "Molecular family object containing {} clusters".format(len(self.clusters))
+        print("Molecular family object containing {} clusters".format(len(self.clusters)))
         for n1,n2,weight in self.scores:
-            print "{} <- {} -> {}".format(n1,weight,n2)
+            print("{} <- {} -> {}".format(n1,weight,n2))
             if len(self.clusters) < 10:
                 plot_spectral_alignment(n1,n2,similarity_function,similarity_tolerance,**kwargs)
 
@@ -719,7 +721,7 @@ def make_initial_network(cluster_list,similarity_function,similarity_tolerance,m
         G.add_node(cluster)
     for i,cluster in enumerate(filtered_cluster_list[:-1]):
         if i%200 == 0 and i > 0:
-            print "Done {} of {}".format(i,len(filtered_cluster_list))
+            print("Done {} of {}".format(i,len(filtered_cluster_list)))
         for cluster2 in filtered_cluster_list[i+1:]:
             if abs(cluster.parent_mz - cluster2.parent_mz) < max_shift:
                 score,_ = similarity_function(cluster,cluster2,similarity_tolerance,min_match)
@@ -771,7 +773,7 @@ class Graph(object):
         for node,edges in filtered_edges.items():
             for node2,weight in edges:
                 if not (node,weight) in filtered_edges[node2]:
-                    print "GAH!"
+                    print("GAH!")
         return Graph(edge_dict = filtered_edges)
 
     def connected_components(self):
@@ -827,13 +829,13 @@ class Graph(object):
 
 
 def mol_network(cluster_list,similarity_function,similarity_tolerance,min_match,score_threshold,k=10,beta=100,mc=1,max_shift = 100):
-    print
-    print "Computing pairwise similarities (might take some time)"
+    print()
+    print("Computing pairwise similarities (might take some time)")
     G = make_initial_network(cluster_list,similarity_function,similarity_tolerance,min_match,score_threshold,k=k,mc=mc,max_shift = max_shift)
 
 
     # print "Created initial network, {} nodes and {} edges".format(len(G),len(G.edges()))
-    print "Originally {} components".format(G.n_connected_components())
+    print("Originally {} components".format(G.n_connected_components()))
     
     molecular_families = G.connected_components()
 
@@ -847,7 +849,7 @@ def mol_network(cluster_list,similarity_function,similarity_tolerance,min_match,
         else:
             too_big.append(family)
 
-    print "{} components are too big".format(len(too_big))
+    print("{} components are too big".format(len(too_big)))
     while not finished:
         new_too_big = []
         for m in too_big:
@@ -863,24 +865,24 @@ def mol_network(cluster_list,similarity_function,similarity_tolerance,min_match,
 
         too_big = new_too_big
         if len(too_big)>0:
-            print "{} components are too big, biggest = {}".format(len(too_big),max([len(m.edge_dict) for m in too_big]))
+            print("{} components are too big, biggest = {}".format(len(too_big),max([len(m.edge_dict) for m in too_big])))
 
         if len(too_big) == 0:
             finished = True
 
 
-    print "After pruning, {} components are left".format(len(final_families))
+    print("After pruning, {} components are left".format(len(final_families)))
     return final_families,[MolecularFamily(m,family_id) for family_id,m in enumerate(final_families)]
 
 def remove_clusters(cluster_list,files):
     # removes from the cluster_list any clusters that include spectra from the files
     # listed in files (e.g. blanks)
     filtered_cluster_list = []
-    print "Removing clusters that appear in: {}".format(", ".join(files))
+    print("Removing clusters that appear in: {}".format(", ".join(files)))
     for cluster in cluster_list:
         if not cluster.contains_file(files):
             filtered_cluster_list.append(cluster)
-    print "Prefiltering = {}, postfiltering = {}".format(len(cluster_list),len(filtered_cluster_list))
+    print("Prefiltering = {}, postfiltering = {}".format(len(cluster_list),len(filtered_cluster_list)))
     return filtered_cluster_list
 
 def get_spectrum_from_file(input_file,scan_number):
@@ -890,7 +892,7 @@ def get_spectrum_from_file(input_file,scan_number):
     for spectrum in run:
         if spec_no == scan_number:
             if not spectrum['ms level'] == 2:
-                print "Warning: the chosen scan is not MS2!"
+                print("Warning: the chosen scan is not MS2!")
             for mz,intensity in spectrum.centroidedPeaks:
                 peaks.append((mz,intensity))
         spec_no += 1
@@ -986,8 +988,8 @@ def test_family(family,similarity_function,similarity_tolerance,score_threshold)
                     max_pos = j
             j+=1
         if max_score < score_threshold:
-            print "PROBLEM: {} < {}".format(max_score,score_threshold)
-            print family.clusters.index(cluster),max_pos
+            print("PROBLEM: {} < {}".format(max_score,score_threshold))
+            print(family.clusters.index(cluster),max_pos)
             return False
     return True
 
@@ -1046,11 +1048,11 @@ class SpectralLibrary(object):
         self.loader = loader
         self.loading_parameters = loading_parameters
         self.load_spectra()
-        print "Loaded {} spectra".format(len(self.spectra))
-        print "Filtering..."
+        print("Loaded {} spectra".format(len(self.spectra)))
+        print("Filtering...")
         self.normalise_max_intensity()
         self.filter()
-        print "Finished filtering -- now have {} spectra".format(len(self.spectra))
+        print("Finished filtering -- now have {} spectra".format(len(self.spectra)))
 
     def remove_small_peaks(self,min_ms2_intensity = 5.0):
         for s in self.spectra:
@@ -1142,7 +1144,7 @@ class MNetLoadMZML(object):
         self.ms1 = []
         self.spectra = []
         self.ms1_to_spectra = {}
-        print "Loading spectra from {}".format(self.filename)
+        print("Loading spectra from {}".format(self.filename))
         run = pymzml.run.Reader(self.filename,obo_version = self.obo_version,
                                 MS1_Precision=self.ms1_precision,
                                 extraAccessions=[('MS:1000016', ['value', 'unitName'])])
@@ -1190,7 +1192,7 @@ class MNetLoadMZML(object):
                     self.spectra.append(this_spectrum)
                     self.ms1_to_spectra[this_ms1] = this_spectrum
 
-        print "Loaded {} spectra".format(len(self.spectra))
+        print("Loaded {} spectra".format(len(self.spectra)))
         self.duplicate_filter()
         return self.ms1,self.spectra
 
@@ -1236,7 +1238,7 @@ class MNetLoadMZML(object):
 
 
 
-        print "After duplicate filtering, {} spectra remain".format(len(self.spectra)) 
+        print("After duplicate filtering, {} spectra remain".format(len(self.spectra)))
         
 
 
