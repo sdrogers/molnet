@@ -244,7 +244,7 @@ def sqrt_normalise(peaks):
 
 # Class to hold a single spectrum and its metadata
 class Spectrum(object):
-    def __init__(self,peaks,file_name,scan_number,ms1,precursor_mz,parent_mz,rt = None,precursor_intensity = None):
+    def __init__(self,peaks,file_name,scan_number,ms1,precursor_mz,parent_mz,rt = None,precursor_intensity = None,charge = None):
         self.peaks = sorted(peaks,key = lambda x: x[0]) # ensure sorted by mz
         self.normalised_peaks = sqrt_normalise(self.peaks) # useful later
         self.n_peaks = len(self.peaks)
@@ -257,6 +257,7 @@ class Spectrum(object):
         self.precursor_mz = precursor_mz
         self.parent_mz = parent_mz
         self.precursor_intensity = precursor_intensity
+        self.charge = charge
 
     def normalise_max_intensity(self,max_intensity = 1000.0):
         new_peaks = []
@@ -420,6 +421,23 @@ class Cluster(object):
         self.set_prototype()
         self.cluster_id = cluster_id
         
+
+    def get_mgf_string(self):
+        out_string = ""
+        out_string += "BEGIN IONS\n"
+        out_string += "FEATURE_ID={}\n".format(self.cluster_id)
+        out_string += "PEPMASS={}\n".format(self.spectrum.precursor_mz)
+        out_string += "SCANS={}\n".format(self.cluster_id)
+        out_string += "RTINSECONDS={}\n".format(self.spectrum.rt)
+        out_string += "CHARGE={}\n".format(self.spectrum.charge)
+        out_string += "MSLEVEL=2\n"
+        out_string += "FILENAME={}\n".format(self.spectrum.file_name)
+        for p in self.spectrum.peaks:
+            out_string += "{} {}\n".format(p[0],p[1])
+        out_string += "END IONS\n\n"
+        return out_string
+
+
     def get_file_intensity_dict(self):
         file_intensity = {}
         for spectrum in self.spectra:
@@ -536,7 +554,7 @@ class Cluster(object):
 class MolecularFamily(object):
     # A class to hold a molecular family object
     def __init__(self,graph_object,family_id):
-        self.clusters = graph_object.edge_dict.keys()
+        self.clusters = list(graph_object.edge_dict.keys())
         self.n_clusters = len(self.clusters)
         self.scores = self.convert_graph_to_scores(graph_object)
         self.family_id = family_id
@@ -580,7 +598,7 @@ class MolecularFamily(object):
         for cluster in self.clusters:
             cluster.plot_spectrum(xlim = xlim,**kwargs)
 
-def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pickle = True):
+def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pickle = True,write_mgf = True):
     import csv,jsonpickle
     # write a csv file from a list of molecular molecular_families
     csv_name = file_name + '_nodes.csv'
@@ -597,7 +615,7 @@ def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pic
     if metadata:
         for mlist,mdict,mtitle in metadata:
             heads += mlist + [mtitle]
-
+    print("Writing csv")
     with open(csv_name,'w') as f:
         writer = csv.writer(f)
         writer.writerow(heads)
@@ -605,7 +623,10 @@ def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pic
             for cluster in family.clusters:
                 newrow = [cluster.cluster_id,family.family_id,cluster.precursor_mz,cluster.parent_mz]
                 newrow += ["{:.2f}".format(cluster.precursor_mz),"{:.2f}".format(cluster.parent_mz)]
-                newrow += [cluster.spectrum.ms1.charge]
+                try:
+                    newrow += [cluster.spectrum.ms1.charge]
+                except:
+                    newrow += [cluster.spectrum.charge]
                 newrow += [cluster.member_string()]
                 newrow += [cluster.n_unique_files()]
                 newrow += cluster.n_members_in_file(unique_files)
@@ -614,9 +635,10 @@ def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pic
                         counts,nnz = cluster.n_metadata_in_cluster(mlist,mdict)
                         newrow += counts + [nnz]
                 writer.writerow(newrow)
-
+    print("Writing edges")
     with open(edge_file,'w') as f:
         writer = csv.writer(f)
+        writer.writerow(["source","target","weight"])
         for family in molecular_families:
             scores = family.scores
             if len(scores) > 0:
@@ -629,23 +651,26 @@ def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pic
                 writer.writerow([cluster.cluster_id,cluster.cluster_id,'self'])
 
     # finally, write the mgf-style file
-    with open(mgf_file,'w') as f:
-        for family in molecular_families:
-            for cluster in family.clusters:
-                f.write("BEGIN IONS\n")
-                f.write("FILENAME={}\n".format(cluster.spectrum.file_name))
-                f.write("SCANNO={}\n".format(cluster.spectrum.scan_number))
-                f.write("CID={}\n".format(cluster.cluster_id))
-                f.write("FAMILYID={}\n".format(family.family_id))
-                f.write("PEPMASS={}\n".format(cluster.spectrum.precursor_mz))
-                f.write("RTINSECONDS={}\n".format(cluster.spectrum.rt))
-                f.write("CHARGE={}\n".format(cluster.spectrum.ms1.charge))
-                f.write("NAME={}\n".format(cluster.cluster_id))
-                for mz,intensity in cluster.spectrum.peaks:
-                    f.write("{} {}\n".format(mz,intensity))
-                f.write("END IONS\n\n")
+    if write_mgf:
+        print("Writing mgf")
+        with open(mgf_file,'w') as f:
+            for family in molecular_families:
+                for cluster in family.clusters:
+                    f.write("BEGIN IONS\n")
+                    f.write("FILENAME={}\n".format(cluster.spectrum.file_name))
+                    f.write("SCANNO={}\n".format(cluster.spectrum.scan_number))
+                    f.write("CID={}\n".format(cluster.cluster_id))
+                    f.write("FAMILYID={}\n".format(family.family_id))
+                    f.write("PEPMASS={}\n".format(cluster.spectrum.precursor_mz))
+                    f.write("RTINSECONDS={}\n".format(cluster.spectrum.rt))
+                    f.write("CHARGE={}\n".format(cluster.spectrum.ms1.charge))
+                    f.write("NAME={}\n".format(cluster.cluster_id))
+                    for mz,intensity in cluster.spectrum.peaks:
+                        f.write("{} {}\n".format(mz,intensity))
+                    f.write("END IONS\n\n")
 
     if pickle:
+        print("Writing pickle")
         # write the pickle of everything
         pickle_file = file_name + '.pickle'
         with open(pickle_file,'w') as f:
@@ -711,7 +736,7 @@ def merge(cluster_list,spectrum,similarity_function,similarity_tolerance,min_mat
 def make_initial_network(cluster_list,similarity_function,similarity_tolerance,min_match,score_threshold,k=10,mc=1,max_shift = 100):
 
     # Do the MC filtering
-    filtered_cluster_list = filter(lambda x: len(x.spectra)>=mc,cluster_list)
+    filtered_cluster_list = list(filter(lambda x: len(x.spectra)>=mc,cluster_list))
 
 
     edges = []
