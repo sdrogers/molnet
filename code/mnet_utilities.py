@@ -2,6 +2,8 @@ from copy import deepcopy
 import os
 import glob
 import csv
+import pandas as pd
+from networkx import *
 from mnet import Annotation,Cluster,Graph,MolecularFamily,Spectrum,sqrt_normalise
 
 def optimise_noise_thresh(groups,similarity_function,similarity_tolerance,min_match_vals = [1,2,3],ms2_vals = [0,1000,5000,10000],n_pairs=1000):
@@ -268,3 +270,74 @@ def make_spectrum(metadata,peaks):
     charge = metadata['CHARGE']
     ms1 = MS1(precursor_mz,rt,charge)
     return Spectrum(peaks,file_name,scan_number,ms1,precursor_mz,precursor_mz,rt=rt,metadata = metadata)
+
+
+import pandas as pd
+from networkx import *
+
+def write_mnet_graphml(molecular_families,file_name,extra_node_data = None, metadata = None):
+    # First need to find all the unique files
+    unique_files = []
+    for family in molecular_families:
+        for cluster in family.clusters:
+            for spectrum in cluster.spectra:
+                unique_files.append(spectrum.file_name)
+    unique_files = sorted(list(set(unique_files)))
+    heads = ['cid','familyid','precursor_mz','parent_mz','short_precursor_mz','short_parent_mz','charge','members','n_unique_files'] + unique_files
+    if metadata:
+        for mlist,mdict,mtitle in metadata:
+            heads += mlist + [mtitle]
+    if extra_node_data:
+        for extra in extra_node_data:
+            heads += extra[0]
+    # create nodes
+    nodes = list()
+    for family in molecular_families:
+        for cluster in family.clusters:
+            newrow = [cluster.cluster_id,family.family_id,cluster.precursor_mz,cluster.parent_mz]
+            newrow += ["{:.2f}".format(cluster.precursor_mz),"{:.2f}".format(cluster.parent_mz)]
+            try:
+                newrow += [cluster.spectrum.ms1.charge]
+            except:
+                newrow += [cluster.spectrum.charge]
+            newrow += [cluster.member_string()]
+            newrow += [cluster.n_unique_files()]
+            newrow += cluster.n_members_in_file(unique_files)
+            if metadata:
+                for mlist,mdict,mtitle in metadata:
+                    counts,nnz = cluster.n_metadata_in_cluster(mlist,mdict)
+                    newrow += counts + [nnz]
+            if extra_node_data:
+                for extra in extra_node_data:
+                    newrow += extra[1][cluster.cluster_id]
+            nodes.append(newrow)
+                #writer.writerow(newrow)
+    nodes_df = pd.DataFrame(nodes,columns=heads)
+    nodes_df.index = nodes_df['cid']
+    # make int64 type columns to float65 to allow continuous mapping in Cytoscape
+    nodes_df[list(nodes_df.dtypes[nodes_df.dtypes == 'int64'].index)] = nodes_df[list(nodes_df.dtypes[nodes_df.dtypes == 'int64'].index)].astype('float64')
+    
+    # create edges
+    ed = list()
+    for family in molecular_families:
+        scores = family.scores
+        if len(scores) > 0:
+            for node1,node2,weight in scores:
+                ed.append([node1.cluster_id,node2.cluster_id,weight])
+        else:
+            # Singleteon family -- write the self loop
+            assert len(family.clusters) == 1
+            cluster = family.clusters[0]
+            ed.append([cluster.cluster_id,cluster.cluster_id,'self'])
+    
+    ed_df = pd.DataFrame(ed,columns=["CLUSTERID1", "CLUSTERID2", "interaction"])
+    
+    # create network graph from edges table
+    MG = nx.from_pandas_edgelist(ed_df, 'CLUSTERID1', 'CLUSTERID2', edge_attr=list(ed_df.columns), 
+                             create_using=nx.MultiGraph())
+    
+    # map node attributes to network from nodes table
+    for column in nodes_df:
+        nx.set_node_attributes(MG, pd.Series(nodes_df[column], index=nodes_df.index).to_dict(), column)
+        
+    return MG
