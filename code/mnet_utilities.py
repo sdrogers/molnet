@@ -4,7 +4,8 @@ import glob
 import csv
 import pandas as pd
 from networkx import *
-from mnet import Annotation,Cluster,Graph,MolecularFamily,Spectrum,sqrt_normalise
+from mnet import Annotation,Cluster,MolecularFamily,Spectrum,sqrt_normalise
+from mnet import Graph as MnetGraph
 
 def optimise_noise_thresh(groups,similarity_function,similarity_tolerance,min_match_vals = [1,2,3],ms2_vals = [0,1000,5000,10000],n_pairs=1000):
     import numpy as np
@@ -173,7 +174,7 @@ def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file):
         for line in reader:
             family = int(line[family_pos])
             if not family in family_graphs:
-                family_graphs[family] = Graph()
+                family_graphs[family] = MnetGraph()
             clid_1 = int(line[cl1_pos])
             clid_2 = int(line[cl2_pos])
             cl1 = cluster_dict[clid_1]
@@ -185,6 +186,12 @@ def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file):
         new_family = MolecularFamily(family_graph,family_id)
         mol_families.append(new_family)
 
+    if mzmine_ms1_file:
+        peak_areas,file_list = load_peak_areas(mzmine_ms1_file)
+    else:
+        peak_areas = None
+        file_list = None
+
     print()
     print()
     print("Loaded {} spectra and {} molecular families".format(
@@ -192,10 +199,27 @@ def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file):
         len(mol_families),
     ))
 
-    return mol_families,cluster_dict,spectra
+    return mol_families,cluster_dict,spectra,peak_areas,file_list
 
+def load_peak_areas(mzmine_ms1_file):
+    with open(mzmine_ms1_file,'r') as f:
+        reader = csv.reader(f)
+        heads = next(reader)
+        # dictionary of filenames and their columns
+        file_name_cols = {h.split('Peak area')[0].rstrip():i for i,h in enumerate(heads) if 'Peak area' in h}
+        peak_areas = {}
+        for line in reader:
+            peak_id = int(line[0])
+            peak_mz = float(line[1])
+            peak_rt = float(line[2])
+            peak_areas[peak_id] = {}
+            peak_areas[peak_id]['mz'] = peak_mz
+            peak_areas[peak_id]['rt'] = peak_rt
+            peak_areas[peak_id]['id'] = peak_id
+            peak_areas[peak_id]['areas'] = {f:float(line[p]) for f,p in file_name_cols.items()}
 
-
+    return peak_areas,list(file_name_cols.keys())
+        
 
 def append_db_hits(spectra_dict,db_result_file):
     with open(db_result_file,'r') as f:
