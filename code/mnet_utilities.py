@@ -1,4 +1,8 @@
 from copy import deepcopy
+import os
+import glob
+import csv
+from mnet import Annotation,Cluster,Graph,MolecularFamily,Spectrum,sqrt_normalise
 
 def optimise_noise_thresh(groups,similarity_function,similarity_tolerance,min_match_vals = [1,2,3],ms2_vals = [0,1000,5000,10000],n_pairs=1000):
     import numpy as np
@@ -53,7 +57,7 @@ def optimise_noise_thresh(groups,similarity_function,similarity_tolerance,min_ma
         neg_array = np.array(neg_curves)
 
         truth = np.hstack((np.ones(n_pairs),np.zeros(n_pairs)))
-        print truth.shape
+        print(truth.shape)
         from sklearn.metrics import roc_auc_score
         auc_vals = []
         for i,m2 in enumerate(ms2_vals):
@@ -118,3 +122,149 @@ def get_neg_pairs(groups,n_pairs = 1000,similarity_tolerance = 0.2):
         if found:
             pairs.append((spec1,spec2))
     return pairs
+
+
+def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file):
+    
+    from MS2 import load_mgf # fix this as it requires pymzmine....
+
+    mgf_file = glob.glob(os.path.join(gnps_root_folder,'spectra','*.mgf'))[0]
+    print("Loading spectra from",mgf_file)    
+    spectra = load_mgf(mgf_file,id_field = 'SCANS')
+
+    print("Checking for db file")
+    db_results = glob.glob(os.path.join(gnps_root_folder,'DB_result','*.tsv'))
+    print("Found {} results files".format(len(db_results)))
+
+    for db_result_file in db_results:
+        append_db_hits(spectra,db_result_file)
+
+    print("Loading nodes file")
+    nodes_file = glob.glob(os.path.join(gnps_root_folder,'clusterinfo_summary','*.tsv'))[0]
+    cluster_dict = {} # cluster id to object
+    family_dict = {} # family id to list of cluster objects
+    with open(nodes_file,'r') as f:
+        reader = csv.reader(f,delimiter = '\t')
+        heads = next(reader)
+        cluster_pos = heads.index('cluster index')
+        family_pos = heads.index('componentindex')
+        for line in reader:
+            cluster = int(line[cluster_pos])
+            new_cluster = Cluster(spectra[cluster],cluster)
+            cluster_dict[cluster] = new_cluster
+            # family = int(line[family_pos])
+            # if not family in family_dict:
+            #     family_dict[family] = [new_cluster]
+            # else:
+            #     family_dict[family].append(new_cluster)
+    
+    print("Loading edges")
+    edge_file = glob.glob(os.path.join(gnps_root_folder,'networkedges_selfloop','*.selfloop'))[0]
+    family_graphs = {}
+    with open(edge_file,'r') as f:
+        reader = csv.reader(f,delimiter = '\t')
+        heads = next(reader)
+        cl1_pos = heads.index('CLUSTERID1')
+        cl2_pos = heads.index('CLUSTERID2')
+        cosine_pos = heads.index('Cosine')
+        family_pos = heads.index('ComponentIndex')
+        for line in reader:
+            family = int(line[family_pos])
+            if not family in family_graphs:
+                family_graphs[family] = Graph()
+            clid_1 = int(line[cl1_pos])
+            clid_2 = int(line[cl2_pos])
+            cl1 = cluster_dict[clid_1]
+            cl2 = cluster_dict[clid_2]
+            weight = float(line[cosine_pos])
+            family_graphs[family].add_edge(cl1,cl2,weight)
+    mol_families = []
+    for family_id,family_graph in family_graphs.items():
+        new_family = MolecularFamily(family_graph,family_id)
+        mol_families.append(new_family)
+
+    print()
+    print()
+    print("Loaded {} spectra and {} molecular families".format(
+        len(spectra),
+        len(mol_families),
+    ))
+
+    return mol_families,cluster_dict,spectra
+
+
+
+
+def append_db_hits(spectra_dict,db_result_file):
+    with open(db_result_file,'r') as f:
+        reader = csv.reader(f,delimiter='\t')
+        heads = next(reader)
+        
+        spec_id_pos = heads.index('SpectrumID')
+        spec_name_pos = heads.index('Compound_Name')
+        for line in reader:
+            new_result = {}
+            for i,l in enumerate(line):
+                new_result[heads[i]] = l
+            scan_no = int(new_result[heads[0]])
+            if hasattr(spectra_dict[scan_no],'metadata'):
+                if not 'annotation' in spectra_dict[scan_no].metadata:
+                    spectra_dict[scan_no].metadata['annotation'] = []
+                spectra_dict[scan_no].metadata['annotation'].append(Annotation(new_result))
+
+
+def load_mgf(mgf_name,id_field = 'SCANS'):
+    spectra  = {}
+    with open(mgf_name,'r') as f:
+        current_metadata = {'filename':mgf_name}
+        current_peaks = []
+        got_record = False
+        for line in f:
+            line = line.rstrip()
+            if len(line) == 0:
+                continue
+            if line.startswith('BEGIN IONS'):
+                if len(current_metadata) > 1:
+                    if len(current_peaks) > 0:
+                        spectrum = make_spectrum(current_metadata,current_peaks)
+                        if id_field == 'SCANS':
+                            id_val = int(current_metadata[id_field])
+                        else:
+                            id_val = current_metadata[id_field]
+                        spectra[id_val] = spectrum
+                        if len(spectra)%100 == 0:
+                            print("Loaded {} spectra".format(len(spectra)))
+                current_metadata = {'filename':mgf_name}
+                current_peaks = []
+            elif len(line.split('=')) > 1:
+                # it is a metadata line
+                tokens = line.split('=')
+                current_metadata[tokens[0]] = tokens[1]
+            elif not line.startswith('END IONS'):
+                # it's a peak
+                tokens = line.split()
+                mz = float(tokens[0])
+                intensity = float(tokens[1])
+                current_peaks.append((mz,intensity))
+    # save the last one
+    if len(current_peaks) > 0:
+        spectrum = make_spectrum(current_metadata,current_peaks)
+        if id_field == 'SCANS':
+            id_val = int(current_metadata[id_field])
+        else:
+            id_val = current_metadata[id_field]
+        spectra[id_val] = spectrum
+    return spectra
+
+def make_spectrum(metadata,peaks):
+    from mnet import MS1
+    file_name = metadata['filename']
+    scan_number = int(metadata['SCANS'])
+    precursor_mz = float(metadata['PEPMASS'])
+    try:
+        rt = float(metadata['RTINSECONDS'])
+    except:
+        rt = None
+    charge = metadata['CHARGE']
+    ms1 = MS1(precursor_mz,rt,charge)
+    return Spectrum(peaks,file_name,scan_number,ms1,precursor_mz,precursor_mz,rt=rt,metadata = metadata)

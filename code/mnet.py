@@ -241,10 +241,28 @@ def sqrt_normalise(peaks):
         normalised_peaks.append((mz,intensity/norm_facc))
     return normalised_peaks
 
+class Annotation(object):
+    def __init__(self,data_dict):
+        self.metadata = data_dict
+    
+    
+    def get_score(self):
+        if 'score' in self.metadata:
+            return self.metadata['score']
+        elif 'MQScore' in self.metadata:
+            return self.metadata['MQScore']
+        else:
+            return None
 
+    score = property(get_score)
+
+    def __str__(self):
+        return "{} {}".format(
+            self.metadata.get('Compound_Name',None),
+            self.metadata.get('SpectrumID',None))
 # Class to hold a single spectrum and its metadata
 class Spectrum(object):
-    def __init__(self,peaks,file_name,scan_number,ms1,precursor_mz,parent_mz,rt = None,precursor_intensity = None):
+    def __init__(self,peaks,file_name,scan_number,ms1,precursor_mz,parent_mz,rt = None,precursor_intensity = None,metadata = None):
         self.peaks = sorted(peaks,key = lambda x: x[0]) # ensure sorted by mz
         self.normalised_peaks = sqrt_normalise(self.peaks) # useful later
         self.n_peaks = len(self.peaks)
@@ -257,6 +275,20 @@ class Spectrum(object):
         self.precursor_mz = precursor_mz
         self.parent_mz = parent_mz
         self.precursor_intensity = precursor_intensity
+        self.metadata = metadata
+
+    def get_annotation(self):
+        if not 'annotation' in self.metadata:
+            return None
+        else:
+            anns = self.metadata['annotation']
+            anns.sort(key = lambda x: x.score,reverse = True)
+            return anns[0]
+
+
+
+    annotation = property(get_annotation)
+
 
     def normalise_max_intensity(self,max_intensity = 1000.0):
         new_peaks = []
@@ -425,7 +457,11 @@ class Cluster(object):
         self.n_spectra = 1
         self.set_prototype()
         self.cluster_id = cluster_id
-        
+
+    def get_annotation(self):
+        return self.spectrum.annotation 
+    
+    annotation = property(get_annotation)
 
     def get_mgf_string(self):
         out_string = ""
@@ -548,7 +584,10 @@ class Cluster(object):
 
 
     def __str__(self):
-        return "Cluster ({}), mz: ".format(self.n_spectra) + str(self.spectrum.parent_mz)
+        return "Cluster ({}), mz: {}, ({})".format(
+            self.n_spectra,
+            str(self.spectrum.parent_mz),
+            self.spectrum.annotation)
 
     def __cmp__(self,other):
         if self.parent_mz > other.parent_mz:
@@ -571,6 +610,8 @@ class MolecularFamily(object):
             print("{} <- {} -> {}".format(n1,weight,n2))
             if len(self.clusters) < 10:
                 plot_spectral_alignment(n1,n2,similarity_function,similarity_tolerance,**kwargs)
+            else:
+                print("Not plotting as too many clusters, use plot_spectral_alignment to plot individual pairs")
 
     def convert_graph_to_scores(self,graph_object):
         done = set()
