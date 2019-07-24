@@ -128,7 +128,7 @@ def get_neg_pairs(groups,n_pairs = 1000,similarity_tolerance = 0.2):
 
 def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file):
     
-    from MS2 import load_mgf # fix this as it requires pymzmine....
+    from mnet_utilities import load_mgf # fix this as it requires pymzmine....
 
     mgf_file = glob.glob(os.path.join(gnps_root_folder,'spectra','*.mgf'))[0]
     print("Loading spectra from",mgf_file)    
