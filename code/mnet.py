@@ -603,12 +603,12 @@ class MolecularFamily(object):
         self.scores = self.convert_graph_to_scores(graph_object)
         self.family_id = family_id
 
-    def report(self,similarity_function,similarity_tolerance,**kwargs):
+    def report(self,similarity_function,similarity_tolerance,force_plot = False,**kwargs):
         print
         print("Molecular family object containing {} clusters".format(len(self.clusters)))
         for n1,n2,weight in self.scores:
             print("{} <- {} -> {}".format(n1,weight,n2))
-            if len(self.clusters) < 10:
+            if not force_plot and len(self.clusters) < 10:
                 plot_spectral_alignment(n1,n2,similarity_function,similarity_tolerance,**kwargs)
             else:
                 print("Not plotting as too many clusters, use plot_spectral_alignment to plot individual pairs")
