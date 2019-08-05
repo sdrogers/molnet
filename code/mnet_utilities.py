@@ -127,11 +127,14 @@ def get_neg_pairs(groups,n_pairs = 1000,similarity_tolerance = 0.2):
     return pairs
 
 
-def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file):
+def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file,
+                            mgf_file = None,
+                            nodes_file = None,
+                            edge_file = None):
     
     from mnet_utilities import load_mgf # fix this as it requires pymzmine....
-
-    mgf_file = glob.glob(os.path.join(gnps_root_folder,'spectra','*.mgf'))[0]
+    if not mgf_file:
+        mgf_file = glob.glob(os.path.join(gnps_root_folder,'spectra','*.mgf'))[0]
     print("Loading spectra from",mgf_file)    
     spectra = load_mgf(mgf_file,id_field = 'SCANS')
 
@@ -143,7 +146,8 @@ def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file):
         append_db_hits(spectra,db_result_file)
 
     print("Loading nodes file")
-    nodes_file = glob.glob(os.path.join(gnps_root_folder,'clusterinfo_summary','*.tsv'))[0]
+    if not nodes_file:
+        nodes_file = glob.glob(os.path.join(gnps_root_folder,'clusterinfo_summary','*.tsv'))[0]
     cluster_dict = {} # cluster id to object
     family_dict = {} # family id to list of cluster objects
     with open(nodes_file,'r') as f:
@@ -162,7 +166,8 @@ def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file):
             #     family_dict[family].append(new_cluster)
     
     print("Loading edges")
-    edge_file = glob.glob(os.path.join(gnps_root_folder,'networkedges_selfloop','*.selfloop'))[0]
+    if not edge_file:
+        edge_file = glob.glob(os.path.join(gnps_root_folder,'networkedges_selfloop','*.selfloop'))[0]
     family_graphs = {}
     with open(edge_file,'r') as f:
         reader = csv.reader(f,delimiter = '\t')
