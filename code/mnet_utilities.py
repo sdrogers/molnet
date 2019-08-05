@@ -206,7 +206,10 @@ def load_peak_areas(mzmine_ms1_file):
         reader = csv.reader(f)
         heads = next(reader)
         # dictionary of filenames and their columns
-        file_name_cols = {h.split('Peak area')[0].rstrip():i for i,h in enumerate(heads) if 'Peak area' in h}
+        if 'filtered' in heads[3]:
+            file_name_cols = {h.split('filtered Peak area')[0].rstrip():i for i,h in enumerate(heads) if 'filtered Peak area' in h}
+        else: 
+            file_name_cols = {h.split('Peak area')[0].rstrip():i for i,h in enumerate(heads) if 'Peak area' in h}
         peak_areas = {}
         for line in reader:
             peak_id = int(line[0])
@@ -333,7 +336,8 @@ def write_mnet_graphml(molecular_families,file_name,extra_node_data = None, meta
                     newrow += counts + [nnz]
             if extra_node_data:
                 for extra in extra_node_data:
-                    newrow += extra[1][cluster.cluster_id]
+                	if cluster.cluster_id in extra[1]: 
+                		newrow += extra[1][cluster.cluster_id]
             nodes.append(newrow)
                 #writer.writerow(newrow)
     nodes_df = pd.DataFrame(nodes,columns=heads)

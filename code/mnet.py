@@ -682,7 +682,8 @@ def write_mnet_files(molecular_families,file_name,parameters,metadata = None,pic
                         newrow += counts + [nnz]
                 if extra_node_data:
                     for extra in extra_node_data:
-                        newrow += extra[1][cluster.cluster_id]
+                         if cluster.cluster_id in extra[1]: 
+                            newrow += extra[1][cluster.cluster_id]
                 writer.writerow(newrow)
     print("Writing edges")
     with open(edge_file,'w') as f:
