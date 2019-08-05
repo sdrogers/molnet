@@ -336,7 +336,8 @@ def write_mnet_graphml(molecular_families,file_name,extra_node_data = None, meta
                     newrow += counts + [nnz]
             if extra_node_data:
                 for extra in extra_node_data:
-                    newrow += extra[1][cluster.cluster_id]
+                	if cluster.cluster_id in extra[1]: 
+                		newrow += extra[1][cluster.cluster_id]
             nodes.append(newrow)
                 #writer.writerow(newrow)
     nodes_df = pd.DataFrame(nodes,columns=heads)
