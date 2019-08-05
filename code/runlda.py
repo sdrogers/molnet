@@ -1,4 +1,4 @@
-LDA_CODE_PATH = '/Users/simon/git/lda/code'
+LDA_CODE_PATH = '/home/simon/git/lda/code'
 MOTIF_DB_PATH = '/home/simon/git/motifdb'
 
 

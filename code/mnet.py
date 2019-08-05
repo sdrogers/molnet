@@ -8,6 +8,7 @@ import bisect
 import pymzml
 import glob
 import csv
+import jsonpickle
 from blist import blist
 
 from scoring_functions import fast_cosine,fast_cosine_shift
@@ -41,6 +42,27 @@ options = {
 }
 
 def main(argv):
+    options = {
+        "min_ms2_intensity":5000,
+        "filter_k":6,
+        "filter_mz_range":50,
+        "filter_precursor_tol":17,
+        "filter_n_peaks":2,
+        "duplicate_mz_tol":0.2,
+        "duplicate_rt_tol":5,
+        "cl_ms1_tol":0.2,
+        "cl_rt_tol":1e100,
+        "cl_sim_function":'cosine',
+        "cl_min_match_peaks":2,
+        "ms2_tol":0.2,
+        "cl_score_threshold":0.6,
+        "mn_sim_function":'cosine_shift',
+        "mn_score_threshold":0.6,
+        "mn_min_match_peaks":2,
+        "mn_mc":1,
+        "removal_list":None,
+        "metadata_file": None,
+    }
     long_options = ["min_ms2_intensity=",
                     "filter_k=",
                     "filter_mz_range=",
@@ -60,21 +82,22 @@ def main(argv):
                     "mn_mc=",
                     "removal_list=",
                     "metadata_file=",
+                    "settings_file=",
                     ]
     input_dir = argv[0]
     output_prefix = argv[1]
-
-    options['input_dir'] = input_dir
-    options['output_prefix'] = output_prefix
+   
 
     found_options,the_rest = getopt.getopt(argv[2:],"",long_options)
     
+
     print("Welcome to Simons molecular networking pipeline")
     print("--------")
     print("Input folder: ",input_dir)
     print("Output prefix: ",output_prefix)
     print()
     print()
+
     for key,value in found_options:
         keyk = key.split('--')[1]
         try:

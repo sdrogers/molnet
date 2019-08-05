@@ -150,6 +150,7 @@ def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file,mgf_file = None,nodes_
     with open(nodes_file,'r') as f:
         reader = csv.reader(f,delimiter = '\t')
         heads = next(reader)
+        print(heads)
         cluster_pos = heads.index('cluster index')
         for line in reader:
             cluster = int(line[cluster_pos])
