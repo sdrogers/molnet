@@ -127,10 +127,7 @@ def get_neg_pairs(groups,n_pairs = 1000,similarity_tolerance = 0.2):
     return pairs
 
 
-def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file,
-                            mgf_file = None,
-                            nodes_file = None,
-                            edge_file = None):
+def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file,mgf_file = None,nodes_file = None,edge_file = None):
     
     from mnet_utilities import load_mgf # fix this as it requires pymzmine....
     if not mgf_file:
