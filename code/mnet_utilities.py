@@ -151,16 +151,10 @@ def initialise_from_gnps(gnps_root_folder,mzmine_ms1_file,mgf_file = None,nodes_
         reader = csv.reader(f,delimiter = '\t')
         heads = next(reader)
         cluster_pos = heads.index('cluster index')
-        family_pos = heads.index('componentindex')
         for line in reader:
             cluster = int(line[cluster_pos])
             new_cluster = Cluster(spectra[cluster],cluster)
             cluster_dict[cluster] = new_cluster
-            # family = int(line[family_pos])
-            # if not family in family_dict:
-            #     family_dict[family] = [new_cluster]
-            # else:
-            #     family_dict[family].append(new_cluster)
     
     print("Loading edges")
     if not edge_file:
