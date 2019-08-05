@@ -11,7 +11,7 @@ class SpecLib(object):
         self.mgf_file = mgf_file
         self.spectra = None
     def _load_mgf(self,id_field='SPECTRUMID'):
-        from MS2 import load_mgf
+        from mnet_utilities import load_mgf
         self.spectra = load_mgf(self.mgf_file,id_field = id_field)
         for k,v in self.spectra.items():
             v.spectrum_id = k
