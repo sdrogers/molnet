@@ -303,6 +303,8 @@ class Spectrum(object):
     def get_annotation(self):
         if not 'annotation' in self.metadata:
             return None
+        elif len(self.metadata['annotation']) == 0:
+            return None
         else:
             anns = self.metadata['annotation']
             anns.sort(key = lambda x: x.score,reverse = True)
@@ -629,13 +631,14 @@ class MolecularFamily(object):
     def report(self,similarity_function,similarity_tolerance,force_plot = False,**kwargs):
         print
         print("Molecular family object containing {} clusters".format(len(self.clusters)))
+        if not force_plot and len(self.clusters>=10):
+            print("Not plotting as too many clusters, use plot_spectral_alignment to plot individual pairs")
+
         for n1,n2,weight in self.scores:
             print("{} <- {} -> {}".format(n1,weight,n2))
             if not force_plot and len(self.clusters) < 10:
                 plot_spectral_alignment(n1,n2,similarity_function,similarity_tolerance,**kwargs)
-            else:
-                print("Not plotting as too many clusters, use plot_spectral_alignment to plot individual pairs")
-
+            
     def convert_graph_to_scores(self,graph_object):
         done = set()
         scores = []
