@@ -631,7 +631,7 @@ class MolecularFamily(object):
     def report(self,similarity_function,similarity_tolerance,force_plot = False,**kwargs):
         print
         print("Molecular family object containing {} clusters".format(len(self.clusters)))
-        if not force_plot and len(self.clusters>=10):
+        if not force_plot and len(self.clusters)>=10:
             print("Not plotting as too many clusters, use plot_spectral_alignment to plot individual pairs")
 
         for n1,n2,weight in self.scores:
@@ -935,7 +935,6 @@ def mol_network(cluster_list,similarity_function,similarity_tolerance,min_match,
     G = make_initial_network(cluster_list,similarity_function,similarity_tolerance,min_match,score_threshold,k=k,mc=mc,max_shift = max_shift)
 
 
-    # print "Created initial network, {} nodes and {} edges".format(len(G),len(G.edges()))
     print("Originally {} components".format(G.n_connected_components()))
     
     molecular_families = G.connected_components()

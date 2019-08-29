@@ -365,3 +365,44 @@ def write_mnet_graphml(molecular_families,file_name,extra_node_data = None, meta
         nx.set_node_attributes(MG, pd.Series(nodes_df[column], index=nodes_df.index).to_dict(), column)
         
     return MG
+
+
+def compute_delta_mz(family):
+    shifts = []
+    for cluster1,cluster2,score in family.scores:
+        shifts.append(abs(cluster1.spectrum.precursor_mz - cluster2.spectrum.precursor_mz))
+    return shifts
+
+
+def family_hg(cluster_p_val_dict,mol_families,p_thresh = 0.01):
+    # takes as input a dictionary that maps clusters to their p-vals
+    # the key is a cluster id, and the value is another dictionary 
+    # that should have a pval field
+    from scipy.stats import hypergeom
+    import numpy as np
+    # compute the hypergeometric business
+    fam_clust_sig = []
+    for mf in mol_families:
+        local_n_sig = 0
+        n_clu = 0
+        for c in mf.clusters:
+            if c.cluster_id in cluster_p_val_dict:
+                n_clu += 1
+                if cluster_p_val_dict[c.cluster_id]['pval'] <= p_thresh:
+                    local_n_sig += 1
+        fam_clust_sig.append((mf,n_clu,local_n_sig))
+
+    N = len(cluster_p_val_dict)
+    pvallist = []
+    for c in cluster_p_val_dict:
+        pvallist.append(cluster_p_val_dict[c]['pval'])
+        
+    n_sig = len(list(filter(lambda x: x <= p_thresh,pvallist)))
+    fam_clust_sig_hyp = []
+    for fam,n_clu,local_n_sig in fam_clust_sig:
+        rv = hypergeom(N,n_sig,n_clu)
+        poss = np.arange(local_n_sig,n_clu+1)
+        hypp = rv.pmf(poss).sum()
+        fam_clust_sig_hyp.append((fam,hypp,n_clu,local_n_sig))
+    fam_clust_sig_hyp.sort(key = lambda x: x[1])
+    return fam_clust_sig_hyp
