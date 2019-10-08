@@ -5,11 +5,9 @@ import os
 import getopt
 import math
 import bisect
-import pymzml
 import glob
 import csv
 import jsonpickle
-from blist import blist
 
 from scoring_functions import fast_cosine,fast_cosine_shift
 
@@ -174,6 +172,8 @@ def main(argv):
     print()
     print("Clustering...")
     spectra.sort(key = lambda x: x.total_ms2_intensity,reverse = True)
+
+    from blist import blist
     cluster_list = blist([])
     next_id = 0
     for i,s in enumerate(spectra):
@@ -298,7 +298,10 @@ class Spectrum(object):
         self.precursor_mz = precursor_mz
         self.parent_mz = parent_mz
         self.precursor_intensity = precursor_intensity
-        self.metadata = metadata
+        if metadata:
+            self.metadata = metadata
+        else:
+            self.metadata = {}
 
     def get_annotation(self):
         if not 'annotation' in self.metadata:
@@ -992,6 +995,7 @@ def remove_clusters(cluster_list,files):
     return filtered_cluster_list
 
 def get_spectrum_from_file(input_file,scan_number):
+    import pymzml
     run = pymzml.run.Reader(input_file,obo_version='4.0.1')
     spec_no = 0
     peaks = []
@@ -1247,6 +1251,7 @@ class MNetLoadMZML(object):
         self.get_groups = get_groups
 
     def load_spectra(self):
+        import pymzml
         self.ms1 = []
         self.spectra = []
         self.ms1_to_spectra = {}
